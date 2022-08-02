@@ -39,16 +39,7 @@ def main():
     __title__ = "CloudJack"
     __version__ = "1.0.4"
 
-    msg = __title__ + " v" + __version__
-
-    banner = """
-  oooooooo8 o888                              oooo ooooo                      oooo        
-o888     88  888   ooooooo  oooo  oooo   ooooo888   888   ooooooo    ooooooo   888  ooooo 
-888          888 888     888 888   888 888    888   888   ooooo888 888     888 888o888    
-888o     oo  888 888     888 888   888 888    888   888 888    888 888         8888 88o   
- 888oooo88  o888o  88ooo88    888o88 8o  88ooo888o  888  88ooo88 8o  88ooo888 o888o o888o
-                                                  8o888
-"""
+    msg = f"{__title__} v{__version__}"
 
     parser = argparse.ArgumentParser(add_help=False, formatter_class=argparse.RawTextHelpFormatter, epilog=msg)
 
@@ -65,17 +56,18 @@ o888     88  888   ooooooo  oooo  oooo   ooooo888   888   ooooooo    ooooooo   8
         print(parser.format_help())
         sys.exit(0)
 
-    if args.profile:
-        profile = args.profile
-    else:
-        profile = "default"
-
-    if args.output:
-        output = args.output
-    else:
-        output = "json"
-
+    profile = args.profile or "default"
+    output = args.output or "json"
     if args.verbose:
+        banner = """
+  oooooooo8 o888                              oooo ooooo                      oooo        
+o888     88  888   ooooooo  oooo  oooo   ooooo888   888   ooooooo    ooooooo   888  ooooo 
+888          888 888     888 888   888 888    888   888   ooooo888 888     888 888o888    
+888o     oo  888 888     888 888   888 888    888   888 888    888 888         8888 88o   
+ 888oooo88  o888o  88ooo88    888o88 8o  88ooo888o  888  88ooo88 8o  88ooo888 o888o o888o
+                                                  8o888
+"""
+
         print(("%s \n\t\t\t%s\n" % (banner, msg)))
 
     session = boto3.Session(profile_name=profile)
@@ -98,11 +90,7 @@ o888     88  888   ooooooo  oooo  oooo   ooooo888   888   ooooooo    ooooooo   8
             print(("Analyzing Route53 ZoneID %s...\n" % zoneid))
 
         # Determine if zone is public or private for informational purposes
-        if hosted_zone['Config']['PrivateZone']:
-            zonetype = "Private"
-        else:
-            zonetype = "Public"
-
+        zonetype = "Private" if hosted_zone['Config']['PrivateZone'] else "Public"
         # Iterate through all Route53 resource records sets
         for resource_record_set in route53.list_resource_record_sets(HostedZoneId=zoneid)['ResourceRecordSets']:
 
@@ -147,12 +135,12 @@ o888     88  888   ooooooo  oooo  oooo   ooooo888   888   ooooooo    ooooooo   8
                                         cflag += 1
                                         break
 
-                    # A pair of flags indicates Route53 and CloudFront are NOT decoupled
-                    if dflag and cflag:
-                        status = 'PASS'
-                    if dflag and not cflag:
-                        status = 'FAIL'
-                        cname = None
+                    if dflag:
+                        if cflag:
+                            status = 'PASS'
+                        if not cflag:
+                            status = 'FAIL'
+                            cname = None
                     if not dflag:
                         status = 'FAIL'
                         cname = dname = None
